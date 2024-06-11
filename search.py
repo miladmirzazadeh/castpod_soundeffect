@@ -70,7 +70,7 @@
 
 
 
-
+from flask import Flask, request, jsonify
 import pandas as pd
 import faiss
 import numpy as np
@@ -82,7 +82,7 @@ from io import BytesIO
 import io
 import os
 
-from flask import Flask, request, jsonify
+
 
 app = Flask(__name__)
 
