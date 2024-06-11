@@ -19,7 +19,7 @@ class SoundeffectRetriever():
     def __init__(self):
         self.bucket_name = "castpod-bucket"
         self.storage_client = storage.Client()
-        self.openai_client = OpenAI(api_key="sk-proj-iscJnAI4hzgx4Bd7bXnjT3BlbkFJRp3MIL3k0YqsgQk5VZzJ")
+        self.openai_client = OpenAI(api_key="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")
         self.faiss_index = self.load_faiss_index_from_local()
         
     def load_url_df(self, local_file_path="/cache/soundeffects_urls.csv"):
