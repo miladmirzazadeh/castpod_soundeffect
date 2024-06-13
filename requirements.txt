@@ -7,3 +7,5 @@ google-cloud-storage
 selenium
 requests
 packaging
+google-cloud-logging
+filetype

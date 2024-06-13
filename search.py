@@ -14,6 +14,20 @@ from selenium.webdriver.support import expected_conditions as EC
 import requests
 from io import BytesIO
 
+import logging
+from google.cloud import logging as cloud_logging
+
+
+# Set up Google Cloud Logging
+client = cloud_logging.Client()
+client.setup_logging()
+
+# Set up standard Python logging
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
+
+
 app = Flask(__name__)
 
 
@@ -177,8 +191,9 @@ class SoundeffectDownloader:
                 wav_buffer = BytesIO(response.content)
                 wav_buffer.seek(0)  # Move the cursor to the beginning of the buffer
                 return wav_buffer
-        except: 
-            return False 
+        except Exception as e:
+            logger.error(f"Failed to download soundeffect: {e}", exc_info=True)
+            return False
 
 
 class SoundeffectRetriever():
@@ -222,16 +237,35 @@ soundeffect_downloader = SoundeffectDownloader()
 @app.route('/search', methods=['POST'])
 def search():
     data = request.json
-    query = data.get('query', '')
+    query = data.get('query')
     if not query:
+        logger.error(f'error : No query provided')
         return jsonify({'error': 'No query provided'}), 400
-
     try:
         soundeffect_id = retriever.return_soundeffect_id(query)
-        wav_buffer = soundeffect_downloader.download_soundeffect(soundeffect_id)
-        return send_file(wav_buffer, as_attachment=True, download_name='new_soundeffect.wav', mimetype='audio/wav')
+        audio_buffer = soundeffect_downloader.download_soundeffect(soundeffect_id)
+        if audio_buffer:
+            # Detect the file type
+            kind = filetype.guess(audio_buffer)
+            if kind is None:
+                logger.error("Cannot guess the file type!")
+                return jsonify({"error": "Cannot guess the file type"}), 400
+            
+            # Set the correct mimetype based on file type
+            if kind.extension == "wav":
+                mimetype = 'audio/wav'
+            elif kind.extension == "mp3":
+                mimetype = 'audio/mpeg'
+            elif kind.extension == "ogg":
+                mimetype = 'audio/ogg'
+            else:
+                logger.error(f"Unsupported audio format: {kind.extension}")
+                return jsonify({"error": f"Unsupported audio format: {kind.extension}"}), 400
+        
+            return send_file(audio_buffer, as_attachment=True, download_name=f'new_soundeffect.{kind.extension}', mimetype=mimetype)
 
     except Exception as e:
+        logger.error(f"Failed to send soundeffect to client: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
