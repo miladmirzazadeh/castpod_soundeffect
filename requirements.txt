@@ -6,3 +6,4 @@ openai
 google-cloud-storage
 selenium
 requests
+packaging
