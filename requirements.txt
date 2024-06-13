@@ -1,7 +1,8 @@
+Flask
 pandas
-numpy
-google-cloud-storage
-openai
 faiss-cpu
-flask
-packaging
+numpy
+openai
+google-cloud-storage
+selenium
+requests
