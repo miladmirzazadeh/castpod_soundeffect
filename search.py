@@ -6,6 +6,8 @@ from openai import OpenAI
 from google.cloud import storage
 import io
 
+import filetype
+
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
@@ -16,6 +18,8 @@ from io import BytesIO
 
 import logging
 from google.cloud import logging as cloud_logging
+
+
 
 
 # Set up Google Cloud Logging
