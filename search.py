@@ -220,7 +220,6 @@ class SoundeffectRetriever():
         faiss_index = faiss.read_index(local_file_path)
         return faiss_index
     
-    
     def search_faiss_index(self, query_embedding, k=1):
         distances, indices = self.faiss_index.search(np.array([query_embedding]).astype('float32'), k)
         url_df = self.load_url_df()
@@ -228,18 +227,60 @@ class SoundeffectRetriever():
         results = [id_list[idx] for i, idx in enumerate(indices[0])]
         return results
 
-    def return_soundeffect_id(self, query, k=1):
+    def return_soundeffect_id(self, query):
         query_embedding = self.get_embedding(query)
-        results = self.search_faiss_index(query_embedding, k)
-        soundeffect_ids = results
-        return soundeffect_ids
+        results = self.search_faiss_index(query_embedding)
+        soundeffect_id = results[0]
+        return soundeffect_id
 
 
 # Initialize SoundeffectRetriever
 retriever = SoundeffectRetriever()
+soundeffect_downloader = SoundeffectDownloader()
 
 @app.route('/search', methods=['POST'])
 def search():
+    data = request.json
+    query = data.get('query')
+    if not query:
+        logger.error(f'error : No query provided')
+        return jsonify({'error': 'No query provided'}), 400
+    try:
+        soundeffect_id = retriever.return_soundeffect_id(query)
+        audio_buffer = soundeffect_downloader.download_soundeffect(soundeffect_id)
+        if audio_buffer:
+            # Detect the file type
+            kind = filetype.guess(audio_buffer)
+            if kind is None:
+                logger.error("Cannot guess the file type!")
+                return jsonify({"error": "Cannot guess the file type"}), 400
+            
+            # Set the correct mimetype based on file type
+            if kind.extension == "wav":
+                mimetype = 'audio/wav'
+            elif kind.extension == "mp3":
+                mimetype = 'audio/mpeg'
+            elif kind.extension == "ogg":
+                mimetype = 'audio/ogg'
+            elif kind.extension == "aiff":
+                mimetype = 'audio/aiff'
+            elif kind.extension == "flac":
+                mimetype = 'audio/flac'
+            else:
+                logger.error(f"Unsupported audio format: {kind.extension}")
+                return jsonify({"error": f"Unsupported audio format: {kind.extension}"}), 400
+        
+            return send_file(audio_buffer, as_attachment=True, download_name=f'new_soundeffect.{kind.extension}', mimetype=mimetype)
+
+    except Exception as e:
+        logger.error(f"Failed to send soundeffect to client: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
+
+
+@app.route('/only_search', methods=['POST'])
+def only_search():
     data = request.json
     query = data.get('query')
     if not query:
@@ -252,8 +293,8 @@ def search():
         logger.error(f"Failed to search soundeffects {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
         
-@app.route('/download', methods=['POST'])
-def download(soundeffect_id):
+@app.route('/only_download', methods=['POST'])
+def only_download(soundeffect_id):
     soundeffect_downloader = SoundeffectDownloader()
     try:
         audio_buffer = soundeffect_downloader.download_soundeffect(soundeffect_id)
@@ -285,9 +326,7 @@ def download(soundeffect_id):
         logger.error(f"Failed to send soundeffect to client: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
+
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080)
-
-
-
-
