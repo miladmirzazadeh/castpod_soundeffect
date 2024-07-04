@@ -262,6 +262,10 @@ def search():
                 mimetype = 'audio/mpeg'
             elif kind.extension == "ogg":
                 mimetype = 'audio/ogg'
+            elif kind.extension == "aiff":
+                mimetype = 'audio/aiff'
+            elif kind.extension == "flac":
+                mimetype = 'audio/flac'
             else:
                 logger.error(f"Unsupported audio format: {kind.extension}")
                 return jsonify({"error": f"Unsupported audio format: {kind.extension}"}), 400
