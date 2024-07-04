@@ -220,6 +220,7 @@ class SoundeffectRetriever():
         faiss_index = faiss.read_index(local_file_path)
         return faiss_index
     
+    
     def search_faiss_index(self, query_embedding, k=1):
         distances, indices = self.faiss_index.search(np.array([query_embedding]).astype('float32'), k)
         url_df = self.load_url_df()
