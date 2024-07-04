@@ -73,8 +73,6 @@
 # # # Run search.py when the container launches
 # # CMD ["python", "search.py"]
 
-
-
 # First stage: Install Chrome and necessary libraries
 FROM python:3.9-slim as build
 
@@ -126,6 +124,9 @@ WORKDIR /app
 
 # Copy the current directory contents into the container at /app
 COPY . .
+
+# Expose the port
+EXPOSE 8080
 
 # Run search.py when the container launches
 CMD ["python", "search.py"]
