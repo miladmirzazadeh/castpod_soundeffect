@@ -227,9 +227,9 @@ class SoundeffectRetriever():
         results = [id_list[idx] for i, idx in enumerate(indices[0])]
         return results
 
-    def return_soundeffect_id(self, query):
+    def return_soundeffect_id(self, query, k=1):
         query_embedding = self.get_embedding(query)
-        results = self.search_faiss_index(query_embedding)
+        results = self.search_faiss_index(query_embedding, k)
         soundeffect_ids = results
         return soundeffect_ids
 
@@ -251,7 +251,6 @@ def search():
         logger.error(f"Failed to search soundeffects {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
         
-
 @app.route('/download', methods=['POST'])
 def download(soundeffect_id):
     soundeffect_downloader = SoundeffectDownloader()
@@ -287,3 +286,7 @@ def download(soundeffect_id):
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080)
+
+
+
+
