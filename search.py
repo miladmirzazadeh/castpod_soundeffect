@@ -230,8 +230,8 @@ class SoundeffectRetriever():
     def return_soundeffect_id(self, query):
         query_embedding = self.get_embedding(query)
         results = self.search_faiss_index(query_embedding)
-        soundeffect_id = results[0]
-        return soundeffect_id
+        soundeffect_ids = results
+        return soundeffect_ids
 
 
 # Initialize SoundeffectRetriever
