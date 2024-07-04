@@ -236,7 +236,6 @@ class SoundeffectRetriever():
 
 # Initialize SoundeffectRetriever
 retriever = SoundeffectRetriever()
-soundeffect_downloader = SoundeffectDownloader()
 
 @app.route('/search', methods=['POST'])
 def search():
@@ -246,7 +245,17 @@ def search():
         logger.error(f'error : No query provided')
         return jsonify({'error': 'No query provided'}), 400
     try:
-        soundeffect_id = retriever.return_soundeffect_id(query)
+        soundeffect_ids = retriever.return_soundeffect_id(query, 5)
+        return jsonify({"ids": soundeffect_ids}), 200
+    except Exception as e:
+        logger.error(f"Failed to search soundeffects {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+        
+
+@app.route('/download', methods=['POST'])
+def download(soundeffect_id):
+    soundeffect_downloader = SoundeffectDownloader()
+    try:
         audio_buffer = soundeffect_downloader.download_soundeffect(soundeffect_id)
         if audio_buffer:
             # Detect the file type
@@ -262,6 +271,10 @@ def search():
                 mimetype = 'audio/mpeg'
             elif kind.extension == "ogg":
                 mimetype = 'audio/ogg'
+            elif kind.extension == "aiff":
+                mimetype = 'audio/aiff'
+            elif kind.extension == "flac":
+                mimetype = 'audio/flac'
             else:
                 logger.error(f"Unsupported audio format: {kind.extension}")
                 return jsonify({"error": f"Unsupported audio format: {kind.extension}"}), 400
