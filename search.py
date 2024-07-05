@@ -39,9 +39,6 @@ logger.setLevel(logging.INFO)
 app = Flask(__name__)
 
 
-
-
-
 class SoundeffectDownloader:
     def __init__(self):
         self.client_id = 'jCj2MBDQwUA5AmREUGxC'
@@ -53,20 +50,20 @@ class SoundeffectDownloader:
 
     def set_secret_key(self, secret_id, secret_value):
         # Create the Secret Manager client
-        client = secretmanager.SecretManagerServiceClient()
+        secret_client = secretmanager.SecretManagerServiceClient()
         # Define the resource name of the secret
         project_id = "castpodproject"
         parent = f"projects/{project_id}/secrets/{secret_id}"
         # Add the secret value as a new version
         payload = secret_value.encode("UTF-8")
-        response = client.add_secret_version(
+        response = secret_client.add_secret_version(
             request={"parent": parent, "payload": {"data": payload}}
         )
         return response.name
 
     def get_secret_key(self, secret_id):
         # Create the Secret Manager client
-        client = secretmanager.SecretManagerServiceClient()
+        secret_client = secretmanager.SecretManagerServiceClient()
         # Define the resource name of the secret
         project_id = "castpodproject"
         secret_id = secret_id
@@ -74,14 +71,13 @@ class SoundeffectDownloader:
         # Build the resource name
         name = f"projects/{project_id}/secrets/{secret_id}/versions/{version_id}"
         # Access the secret version
-        response = client.access_secret_version(name=name)
+        response = secret_client.access_secret_version(name=name)
         # Get the secret payload and decode it
         secret_payload = response.payload.data.decode("UTF-8")
         return secret_payload
 
 
     def get_access_key(self):
-
         if self.access_token:
             new_tokens = self.refresh_access_token()
             if new_tokens:
@@ -175,11 +171,13 @@ class SoundeffectRetriever():
         results = [id_list[idx] for i, idx in enumerate(indices[0])]
         return results
 
-    def return_soundeffect_id(self, query):
+    def return_soundeffect_id(self, query, k=1):
         query_embedding = self.get_embedding(query)
-        results = self.search_faiss_index(query_embedding)
-        soundeffect_id = results[0]
-        return soundeffect_id
+        results = self.search_faiss_index(query_embedding, k)
+        soundeffect_ids = results
+        return soundeffect_ids
+
+
 
 
 # Initialize SoundeffectRetriever
