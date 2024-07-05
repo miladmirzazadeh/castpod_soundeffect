@@ -102,7 +102,9 @@ class SoundeffectDownloader:
                 self.set_secret_key("freesound_access_token", self.access_token)
                 self.refresh_token = new_tokens['refresh_token']
                 self.set_secret_key("freesound_refresh_token", self.refresh_token)
+                logger.info(f"new tokens : {new_tokens}")
                 return response.json()
+            
             return None
         except Exception as e:
             logger.error(f"Failed to refresh freesound token: {e}", exc_info=True)
