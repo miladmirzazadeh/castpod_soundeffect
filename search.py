@@ -87,28 +87,27 @@ class SoundeffectDownloader:
 
 
     def refresh_access_token(self):
-        try:
-            token_url = 'https://freesound.org/apiv2/oauth2/access_token/'
-            payload = {
-                'client_id': self.client_id,
-                'client_secret': self.client_secret,
-                'grant_type': 'refresh_token',
-                'refresh_token': self.refresh_token
-            }
-            response = requests.post(token_url, data=payload)
-            if response.status_code == 200:
-                new_tokens = response.json()
-                self.access_token = new_tokens['access_token']
-                self.set_secret_key("freesound_access_token", self.access_token)
-                self.refresh_token = new_tokens['refresh_token']
-                self.set_secret_key("freesound_refresh_token", self.refresh_token)
-                logger.info(f"new tokens : {new_tokens}")
-                return response.json()
-            
-            return None
-        except Exception as e:
-            logger.error(f"Failed to refresh freesound token: {e}", exc_info=True)
-            return None
+        # try:
+        token_url = 'https://freesound.org/apiv2/oauth2/access_token/'
+        payload = {
+            'client_id': self.client_id,
+            'client_secret': self.client_secret,
+            'grant_type': 'refresh_token',
+            'refresh_token': self.refresh_token
+        }
+        response = requests.post(token_url, data=payload)
+        if response.status_code == 200:
+            new_tokens = response.json()
+            self.access_token = new_tokens['access_token']
+            self.set_secret_key("freesound_access_token", self.access_token)
+            self.refresh_token = new_tokens['refresh_token']
+            self.set_secret_key("freesound_refresh_token", self.refresh_token)
+            logger.info(f"new tokens : {new_tokens}")
+            return response.json()
+
+        # except Exception as e:
+        #     logger.error(f"Failed to refresh freesound token: {e}", exc_info=True)
+        #     return None
 
    
     def download_soundeffect(self, sound_id):
