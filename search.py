@@ -243,7 +243,10 @@ def only_search():
         return jsonify({'error': str(e)}), 500
         
 @app.route('/only_download', methods=['POST'])
-def only_download(soundeffect_id):
+def only_download():
+    data = request.json
+    soundeffect_id = data.get('soundeffect_id')
+    
     soundeffect_downloader = SoundeffectDownloader()
     try:
         audio_buffer = soundeffect_downloader.download_soundeffect(soundeffect_id)
