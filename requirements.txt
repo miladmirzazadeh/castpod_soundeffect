@@ -9,3 +9,4 @@ requests
 packaging
 google-cloud-logging
 filetype
+google-cloud-secret-manager

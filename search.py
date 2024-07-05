@@ -4,9 +4,11 @@ import faiss
 import numpy as np
 from openai import OpenAI
 from google.cloud import storage
+from google.cloud import secretmanager
 import io
 
 import filetype
+
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -18,6 +20,8 @@ from io import BytesIO
 
 import logging
 from google.cloud import logging as cloud_logging
+
+
 
 
 
@@ -35,59 +39,56 @@ logger.setLevel(logging.INFO)
 app = Flask(__name__)
 
 
+
+
+
 class SoundeffectDownloader:
     def __init__(self):
         self.client_id = 'jCj2MBDQwUA5AmREUGxC'
         self.client_secret = 'AzIVXpziqensff2UI88xbJsw0An0x4683fcR7dke'
         self.username = 'milad1234'
         self.password = 'Milad_0816'
-        self.authorization_url = 'https://freesound.org/apiv2/oauth2/authorize/?client_id=jCj2MBDQwUA5AmREUGxC&response_type=code&state=xyz'
-        self.refresh_token = None
-        self.access_token = None
-        self.access_token = self.get_access_key()
+        self.refresh_token = self.get_secret_key("freesound_refresh_token")
+        self.access_token = self.get_secret_key("freesound_access_token")
 
-    def init_driver(self):
-        chrome_options = Options()
-        chrome_options.add_argument("--headless")
-        chrome_options.add_argument("--no-sandbox")
-        chrome_options.add_argument("--disable-dev-shm-usage")
-        chrome_options.add_argument("--disable-gpu")
-        chrome_options.add_argument("--window-size=1920x1080")
-        driver = webdriver.Chrome(options=chrome_options)
-        return driver
+    def set_secret_key(self, secret_id, secret_value):
+        # Create the Secret Manager client
+        client = secretmanager.SecretManagerServiceClient()
+        # Define the resource name of the secret
+        project_id = "castpodproject"
+        parent = f"projects/{project_id}/secrets/{secret_id}"
+        # Add the secret value as a new version
+        payload = secret_value.encode("UTF-8")
+        response = client.add_secret_version(
+            request={"parent": parent, "payload": {"data": payload}}
+        )
+        return response.name
+
+    def get_secret_key(self, secret_id):
+        # Create the Secret Manager client
+        client = secretmanager.SecretManagerServiceClient()
+        # Define the resource name of the secret
+        project_id = "castpodproject"
+        secret_id = secret_id
+        version_id = "latest"  # or specify a version number if needed
+        # Build the resource name
+        name = f"projects/{project_id}/secrets/{secret_id}/versions/{version_id}"
+        # Access the secret version
+        response = client.access_secret_version(name=name)
+        # Get the secret payload and decode it
+        secret_payload = response.payload.data.decode("UTF-8")
+        return secret_payload
+
 
     def get_access_key(self):
+
         if self.access_token:
             new_tokens = self.refresh_access_token()
             if new_tokens:
-                self.access_token = new_tokens['access_token']
-                self.refresh_token = new_tokens['refresh_token']
+
                 return self.access_token
-        else:
-            authorization_code = self.get_authorization_code()
-            if authorization_code:
-                token_data = self.fetch_access_token(authorization_code)
-                if token_data:
-                    self.access_token = token_data['access_token']
-                    self.refresh_token = token_data['refresh_token']
-                    return self.access_token
         return None
 
-    def fetch_access_token(self, authorization_code):
-        try:
-            token_url = 'https://freesound.org/apiv2/oauth2/access_token/'
-            payload = {
-                'client_id': self.client_id,
-                'client_secret': self.client_secret,
-                'grant_type': 'authorization_code',
-                'code': authorization_code
-            }
-            response = requests.post(token_url, data=payload)
-            if response.status_code == 200:
-                return response.json()
-            return None
-        except Exception as e:
-            return None
 
     def refresh_access_token(self):
         try:
@@ -100,86 +101,17 @@ class SoundeffectDownloader:
             }
             response = requests.post(token_url, data=payload)
             if response.status_code == 200:
+                self.access_token = new_tokens['access_token']
+                self.set_secret_key("freesound_access_token", self.access_token)
+                self.refresh_token = new_tokens['refresh_token']
+                self.set_secret_key("freesound_refresh_token", self.refresh_token)
                 return response.json()
             return None
         except Exception as e:
+            logger.error(f"Failed to refresh freesound token: {e}", exc_info=True)
             return None
 
-    def get_authorization_code(self):
-        self.driver = self.init_driver()
-        try:
-            self.driver.get(self.authorization_url)
-            if self.check_element_by_xpath("//div[@class='container_main']//div[@class='container']//div[@style=\"font-size:14px;font-family:'Courier';\"]"):
-                auth_code = self.extract_auth_code()
-                if auth_code:
-                    return auth_code
- 
-            if self.check_element_by_xpath("//input[@class='btn login large primary'][@name='allow']"):
-                self.allow_authorization_button()
-                return self.extract_auth_code()
-
-            if self.check_element_by_xpath("//div[@class='row no-gutters']//form[@class='bw-form']//input[@id='id_username']"):
-                self.submit_login_form()
-                if self.check_element_by_xpath("//div[@class='container_main']//div[@class='container']//div[@style=\"font-size:14px;font-family:'Courier';\"]"):
-                    auth_code = self.extract_auth_code()
-                    if auth_code:
-                        return auth_code
-                else: 
-                    self.allow_authorization_button()
-                    return self.extract_auth_code()
-
-        except Exception as e:
-            return None
-        finally:
-            self.driver.quit()
-        return None
-
-    def check_element_by_xpath(self, xpath):
-        try:
-            self.driver.find_element(By.XPATH, xpath)
-            return True
-        except:
-            return False
-
-    def extract_auth_code(self):
-        try:
-            authorization_code = self.driver.find_element(By.XPATH, "//div[@class='container_main']//div[@class='container']//div[@style=\"font-size:14px;font-family:'Courier';\"]").text
-            return authorization_code
-        except:
-            return None
-
-    def allow_authorization_button(self):
-        try:
-            WebDriverWait(self.driver, 20).until(
-                EC.presence_of_element_located((By.XPATH, "//input[@class='btn login large primary'][@name='allow']"))
-            )
-            authorize_button = self.driver.find_element(By.XPATH, "//input[@class='btn login large primary'][@name='allow']")
-            if authorize_button.is_displayed() and authorize_button.is_enabled():
-                authorize_button.click()
-        except Exception as e:
-            return None
-
-    def submit_login_form(self):
-        try:
-            WebDriverWait(self.driver, 20).until(
-                EC.presence_of_element_located((By.XPATH, "//div[@class='row no-gutters']//form[@class='bw-form']//input[@id='id_username']"))
-            )
-            username_input = self.driver.find_element(By.XPATH, "//div[@class='row no-gutters']//form[@class='bw-form']//input[@id='id_username']")
-            if username_input.is_displayed() and username_input.is_enabled():
-                username_input.clear()
-                username_input.send_keys(self.username)
-
-            password_input = self.driver.find_element(By.XPATH, "//div[@class='row no-gutters']//form[@class='bw-form']//input[@id='id_password']")
-            if password_input.is_displayed() and password_input.is_enabled():
-                password_input.clear()
-                password_input.send_keys(self.password)
-
-            login_button = self.driver.find_element(By.XPATH, "//div[@class='row no-gutters']//form[@class='bw-form']//button[@type='submit']")
-            if login_button.is_displayed() and login_button.is_enabled():
-                login_button.click()
-        except Exception as e:
-            return None
-            
+   
     def download_soundeffect(self, sound_id):
         try: 
             url = f'https://freesound.org/apiv2/sounds/{sound_id}/download/'
@@ -195,6 +127,22 @@ class SoundeffectDownloader:
                 wav_buffer = BytesIO(response.content)
                 wav_buffer.seek(0)  # Move the cursor to the beginning of the buffer
                 return wav_buffer
+            elif response.status_code == 401: 
+                self.refresh_access_token()
+                url = f'https://freesound.org/apiv2/sounds/{sound_id}/download/'
+                # Set the headers
+                headers = {
+                    'Authorization': f'Bearer {self.access_token}'
+                }
+                # Make the GET request
+                response = requests.get(url, headers=headers)
+            
+                # Check if the request was successful
+                if response.status_code == 200:
+                    wav_buffer = BytesIO(response.content)
+                    wav_buffer.seek(0)  # Move the cursor to the beginning of the buffer
+                    return wav_buffer
+
         except Exception as e:
             logger.error(f"Failed to download soundeffect: {e}", exc_info=True)
             return False
