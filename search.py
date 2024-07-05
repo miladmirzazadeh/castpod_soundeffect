@@ -97,6 +97,7 @@ class SoundeffectDownloader:
             }
             response = requests.post(token_url, data=payload)
             if response.status_code == 200:
+                new_tokens = response.json()
                 self.access_token = new_tokens['access_token']
                 self.set_secret_key("freesound_access_token", self.access_token)
                 self.refresh_token = new_tokens['refresh_token']
@@ -246,7 +247,6 @@ def only_search():
 def only_download():
     data = request.json
     soundeffect_id = data.get('soundeffect_id')
-    
     soundeffect_downloader = SoundeffectDownloader()
     try:
         audio_buffer = soundeffect_downloader.download_soundeffect(soundeffect_id)
