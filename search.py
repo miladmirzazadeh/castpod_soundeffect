@@ -104,6 +104,8 @@ class SoundeffectDownloader:
             self.set_secret_key("freesound_refresh_token", self.refresh_token)
             logger.info(f"new tokens : {new_tokens}")
             return response.json()
+        else:
+            logger.info("response: {}".format(reponse.json()))
 
         # except Exception as e:
         #     logger.error(f"Failed to refresh freesound token: {e}", exc_info=True)
@@ -125,7 +127,8 @@ class SoundeffectDownloader:
                 wav_buffer = BytesIO(response.content)
                 wav_buffer.seek(0)  # Move the cursor to the beginning of the buffer
                 return wav_buffer
-            elif response.status_code == 401: 
+            elif response.status_code != 200: 
+                logger.info("tyring to refresh token")
                 self.refresh_access_token()
                 url = f'https://freesound.org/apiv2/sounds/{sound_id}/download/'
                 # Set the headers
@@ -251,6 +254,7 @@ def only_download():
     soundeffect_downloader = SoundeffectDownloader()
     try:
         audio_buffer = soundeffect_downloader.download_soundeffect(soundeffect_id)
+        logger.info(f"audio_buffer : {audio_buffer}")
         if audio_buffer:
             # Detect the file type
             kind = filetype.guess(audio_buffer)
