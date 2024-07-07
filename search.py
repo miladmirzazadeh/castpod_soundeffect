@@ -185,7 +185,7 @@ class SoundeffectRetriever():
     def select_soundeffect(self, desc, soundeffects):
         select_se_prompt = '''
         You are an expert soundeffect selector. Based on a description the narrator gives you, your task is to select a soundeffect from a list of options to be placed within a podcast episode. The options hvae different descriptions and different durations. 
-        Your output is only an id of the best choice. We will afterward, trim the first 5 seconds(or less) of the selected sound effect, so too large or too short sound files may not be good choice for us. 
+        Your output is only an id of the best choice: for example, correct: "112223" , wrong: "id: 112223" since I will convert your output to int directly. We will afterward, trim the first 5 seconds(or less) of the selected sound effect, so too large or too short sound files may not be good choice for us. 
         However, the descriptions (including tags, and captions) are more important. Select something that you predict is more useful in the context of the podcast and as soundeffects.
         The desired narrator description is: {}, 
         list of options: 
@@ -199,7 +199,7 @@ class SoundeffectRetriever():
             "content": select_se_prompt.format(desc, soundeffects)
             }
         ],
-        temperature=0.10,
+        temperature=0.01,
         max_tokens=20,
         top_p=1,
         frequency_penalty=0,
