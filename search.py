@@ -39,7 +39,7 @@ client.setup_logging()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-openai_client = OpenAI(api_key = "sk-proj-OVCYof1DWsGwsGTeuMyLT3BlbkFJoTobjrsw0ZmQEYZxR09n")
+openai_client = OpenAI(api_key = "sk-accounttt-jGAyAXNihT8N5Gq0HvsHT3BlbkFJqGP18q6BNJOT37ozTQeG")
 bigquery_client = bigquery.Client(project = "castpodproject")
 
 
