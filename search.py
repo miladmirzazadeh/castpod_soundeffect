@@ -105,7 +105,7 @@ class SoundeffectDownloader:
             logger.info(f"new tokens : {new_tokens}")
             return response.json()
         else:
-            logger.info("response: {}".format(reponse.json()))
+            logger.info("response: {}".format(response.json()))
 
         # except Exception as e:
         #     logger.error(f"Failed to refresh freesound token: {e}", exc_info=True)
