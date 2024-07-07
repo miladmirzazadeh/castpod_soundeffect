@@ -4,7 +4,8 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-
+#test
+from selenium.webdriver.chrome.service import Service
 class SoundeffectDownloader:
     def __init__(self):
         self.client_id = 'jCj2MBDQwUA5AmREUGxC'
@@ -23,7 +24,10 @@ class SoundeffectDownloader:
         chrome_options.add_argument("--disable-dev-shm-usage")
         chrome_options.add_argument("--disable-gpu")
         chrome_options.add_argument("--window-size=1920x1080")
-        driver = webdriver.Chrome(options=chrome_options)
+
+        service = Service('/usr/local/bin/chromedriver')
+        driver = webdriver.Chrome(service=service, options=chrome_options)
+        # driver = webdriver.Chrome(options=chrome_options)
         return driver
 
     def get_access_key(self):

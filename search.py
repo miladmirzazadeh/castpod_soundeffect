@@ -5,16 +5,21 @@ import numpy as np
 from openai import OpenAI
 from google.cloud import storage
 from google.cloud import secretmanager
+from google.cloud import bigquery
+
 import io
 
+from openai import OpenAI
 import filetype
 
 
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
+
+# from selenium import webdriver
+# from selenium.webdriver.common.by import By
+# from selenium.webdriver.chrome.options import Options
+# from selenium.webdriver.support.ui import WebDriverWait
+# from selenium.webdriver.support import expected_conditions as EC
+
 import requests
 from io import BytesIO
 
@@ -34,6 +39,8 @@ client.setup_logging()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
+openai_client = OpenAI(api_key = "sk-proj-OVCYof1DWsGwsGTeuMyLT3BlbkFJoTobjrsw0ZmQEYZxR09n")
+bigquery_client = bigquery.Client(project = "castpodproject")
 
 
 app = Flask(__name__)
@@ -81,7 +88,6 @@ class SoundeffectDownloader:
         if self.access_token:
             new_tokens = self.refresh_access_token()
             if new_tokens:
-
                 return self.access_token
         return None
 
@@ -176,11 +182,65 @@ class SoundeffectRetriever():
         results = [id_list[idx] for i, idx in enumerate(indices[0])]
         return results
 
-    def return_soundeffect_id(self, query, k=1):
+    def select_soundeffect(self, desc, soundeffects):
+        select_se_prompt = '''
+        You are an expert soundeffect selector. Based on a description the narrator gives you, your task is to select a soundeffect from a list of options to be placed within a podcast episode. The options hvae different descriptions and different durations. 
+        Your output is only an id of the best choice. We will afterward, trim the first 5 seconds(or less) of the selected sound effect, so too large or too short sound files may not be good choice for us. 
+        However, the descriptions (including tags, and captions) are more important. Select something that you predict is more useful in the context of the podcast and as soundeffects.
+        The desired narrator description is: {}, 
+        list of options: 
+        {}
+        '''
+        response = openai_client.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {
+            "role": "user",
+            "content": select_se_prompt.format(desc, soundeffects)
+            }
+        ],
+        temperature=0.10,
+        max_tokens=20,
+        top_p=1,
+        frequency_penalty=0,
+        presence_penalty=0
+        )
+        choice = response.choices[0].message.content
+        return int(choice)
+    def get_soundeffects_desc(self, se_ids):
+        ids_to_query = se_ids
+        # Define the query
+        query = """
+            SELECT *
+            FROM `castpodproject.freesound_soundeffects.id_duration_desc`
+            WHERE id IN UNNEST(@ids)
+        """
+
+
+        job_config = bigquery.QueryJobConfig(
+            query_parameters=[
+                bigquery.ArrayQueryParameter("ids", "INT64", ids_to_query)
+            ]
+        )
+
+        # Run the query
+        query_job = bigquery_client.query(query, job_config=job_config)
+
+        options_desciptions = ""
+        # Fetch and print results
+        rows = query_job.result()
+        for row in rows:
+            options_desciptions+= f"ID: {row.id} => Description: {row.complete_desc} , /n Duration => {row.duration} /n "
+        return options_desciptions
+
+    def return_soundeffect_id(self, query, k=5):
         query_embedding = self.get_embedding(query)
-        results = self.search_faiss_index(query_embedding, k)
-        soundeffect_ids = results
-        return soundeffect_ids
+        soundeffect_ids = self.search_faiss_index(query_embedding, k)
+        #retrieve descriptions from bigquery
+        descriptions = self.get_soundeffects_desc(soundeffect_ids)
+        #using GPT
+        final_soundeffect_id = self.select_soundeffect(desc=query, soundeffects= descriptions)
+        return final_soundeffect_id
 
 
 
@@ -189,11 +249,9 @@ class SoundeffectRetriever():
 retriever = SoundeffectRetriever()
 soundeffect_downloader = SoundeffectDownloader()
 
+
 @app.route('/search', methods=['POST'])
 def search():
-    if True:
-        soundeffect_downloader.refresh_access_token()
-        return jsonify({"access_token" : soundeffect_downloader.access_token, "refresh_token": soundeffect_downloader.refresh_token })
     data = request.json
     query = data.get('query')
     if not query:
@@ -252,7 +310,6 @@ def only_search():
 def only_download():
     data = request.json
     soundeffect_id = data.get('soundeffect_id')
-    soundeffect_downloader = SoundeffectDownloader()
     try:
         audio_buffer = soundeffect_downloader.download_soundeffect(soundeffect_id)
         logger.info(f"audio_buffer : {audio_buffer}")
