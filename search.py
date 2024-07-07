@@ -192,6 +192,7 @@ soundeffect_downloader = SoundeffectDownloader()
 @app.route('/search', methods=['POST'])
 def search():
     if True:
+        soundeffect_downloader.refresh_access_token()
         return jsonify({"access_token" : soundeffect_downloader.access_token, "refresh_token": soundeffect_downloader.refresh_token })
     data = request.json
     query = data.get('query')
